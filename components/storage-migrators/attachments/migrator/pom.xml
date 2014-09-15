@@ -24,17 +24,37 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.phenotips</groupId>
-    <artifactId>storage-migrators</artifactId>
+    <artifactId>storage-migrators-attachments</artifactId>
     <version>1.0-SNAPSHOT</version>
   </parent>
-  <artifactId>storage-migrators-attachments</artifactId>
-  <packaging>pom</packaging>
-  <name>PhenoTips - Storage migrators - Attachments</name>
-  <description>Tools for migrating attachments from one type of storage to another.</description>
+  <artifactId>storage-migrators-attachments-migrator</artifactId>
+  <name>PhenoTips - Storage migrators - Attachments - Generic migrator</name>
+  <description>Generic migrator framework for handling attachments.</description>
 
-  <modules>
-    <module>db</module>
-    <module>fs</module>
-    <module>migrator</module>
-  </modules>
+  <properties>
+    <coverage.instructionRatio>0.00</coverage.instructionRatio>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>${project.groupId}</groupId>
+      <artifactId>storage-migrators-api</artifactId>
+      <version>${project.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.xwiki.commons</groupId>
+      <artifactId>xwiki-commons-component-api</artifactId>
+      <version>${xwiki.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-model</artifactId>
+      <version>${xwiki.version}</version>
+    </dependency>
+    <dependency>
+      <groupId>org.xwiki.platform</groupId>
+      <artifactId>xwiki-platform-oldcore</artifactId>
+      <version>${xwiki.version}</version>
+    </dependency>
+  </dependencies>
 </project>
