@@ -24,7 +24,7 @@
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>org.phenotips</groupId>
-    <artifactId>storage-migrators</artifactId>
+    <artifactId>storage-migrators-attachments</artifactId>
     <version>1.0-SNAPSHOT</version>
   </parent>
   <artifactId>storage-migrators-attachments-database</artifactId>
