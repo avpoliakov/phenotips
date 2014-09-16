@@ -38,6 +38,8 @@ import org.slf4j.Logger;
  */
 public abstract class AbstractDataTypeMigrator<T> implements DataTypeMigrator<T>
 {
+    private static final String DEFAULT_STORE = "hibernate";
+
     @Inject
     private Logger logger;
 
@@ -49,23 +51,24 @@ public abstract class AbstractDataTypeMigrator<T> implements DataTypeMigrator<T>
     protected Map<String, DataReader<T>> readers;
 
     @Inject
-    protected Map<String, DataWriter<T>> writer;
+    protected Map<String, DataWriter<T>> writers;
 
     @Override
     public boolean migrate()
     {
+        DataWriter<T> writer = getWriter();
         for (Map.Entry<String, DataReader<T>> entry : this.readers.entrySet()) {
             DataReader<T> reader = entry.getValue();
             if (!reader.hasData()) {
                 continue;
             }
 
-            DataWriter<T> writer = findWriter(entry.getKey());
             if (writer == null) {
                 // No writer found, keep data in place
-                this.logger.warn("Legacy data found for [{}], but no current storage configured; keeping legacy data",
+                this.logger.warn(
+                    "Legacy attachments found in [{}], but no current storage configured; keeping legacy data",
                     entry.getKey());
-                continue;
+                return false;
             }
 
             Iterator<T> data = reader.getData();
@@ -79,11 +82,12 @@ public abstract class AbstractDataTypeMigrator<T> implements DataTypeMigrator<T>
         return false;
     }
 
-    private DataWriter<T> findWriter(String readerName)
+    private DataWriter<T> getWriter()
     {
         Object cfg = this.config.getProperty(getStoreConfigurationKey());
         this.logger.error("Config key: {}, {}", cfg, cfg.getClass().getCanonicalName());
         DataWriter<T> result = null;
+        // writers.get(cfg);
         return result;
     }
 
