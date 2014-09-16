@@ -36,6 +36,8 @@ import java.util.Iterator;
 @Role
 public interface DataReader<T>
 {
+    Type getType();
+
     boolean hasData();
 
     Iterator<EntityReference> listData();

@@ -71,6 +71,10 @@ public abstract class AbstractDataTypeMigrator<T> implements DataTypeMigrator<T>
                 return false;
             }
 
+            if (reader.getType().equals(writer.getType())) {
+                continue;
+            }
+
             Iterator<T> data = reader.getData();
             while (data.hasNext()) {
                 T item = data.next();

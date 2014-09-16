@@ -30,5 +30,7 @@ import org.xwiki.stability.Unstable;
 @Role
 public interface DataTypeMigrator<T>
 {
+    Type getType();
+
     boolean migrate();
 }

@@ -19,6 +19,8 @@
  */
 package org.phenotips.storage.migrators.internal;
 
+import org.phenotips.storage.migrators.Type;
+
 import org.xwiki.component.annotation.Component;
 
 import javax.inject.Named;
@@ -35,6 +37,14 @@ import com.xpn.xwiki.doc.XWikiAttachment;
 @Singleton
 public class AttachmentsMigrator extends AbstractDataTypeMigrator<XWikiAttachment>
 {
+    public static final Type TYPE = new Type("attachments", "hibernate");
+
+    @Override
+    public Type getType()
+    {
+        return TYPE;
+    }
+
     @Override
     protected String getStoreConfigurationKey()
     {

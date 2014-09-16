@@ -31,5 +31,7 @@ import org.xwiki.stability.Unstable;
 @Role
 public interface DataWriter<T>
 {
+    Type getType();
+
     boolean storeItem(T item);
 }
