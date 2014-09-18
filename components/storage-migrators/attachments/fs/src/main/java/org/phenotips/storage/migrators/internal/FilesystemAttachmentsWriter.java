@@ -1,6 +1,6 @@
 package org.phenotips.storage.migrators.internal;
 
-import org.phenotips.storage.migrators.DataReader;
+import org.phenotips.storage.migrators.DataWriter;
 import org.phenotips.storage.migrators.Type;
 
 import org.xwiki.bridge.DocumentAccessBridge;
@@ -24,21 +24,12 @@ import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.doc.XWikiAttachment;
 import com.xpn.xwiki.doc.XWikiAttachmentContent;
 import com.xpn.xwiki.doc.XWikiDocument;
-import com.xpn.xwiki.store.XWikiAttachmentStoreInterface;
-import com.xpn.xwiki.store.hibernate.HibernateSessionFactory;
 
 @Component
 @Named("attachments/hibernate")
 @Singleton
-public class HibernateAttachmentsReader implements DataReader<XWikiAttachmentContent>
+public class FilesystemAttachmentsWriter implements DataWriter<XWikiAttachmentContent>
 {
-    @Inject
-    private HibernateSessionFactory hibernate;
-
-    @Inject
-    @Named("hibernate")
-    private XWikiAttachmentStoreInterface store;
-
     @Inject
     @Named("current")
     private DocumentReferenceResolver<String> resolver;
@@ -150,7 +141,7 @@ public class HibernateAttachmentsReader implements DataReader<XWikiAttachmentCon
         public EntityReference next()
         {
             String[] item = this.data.next();
-            return new AttachmentReference(item[1], HibernateAttachmentsReader.this.resolver.resolve(item[0]));
+            return new AttachmentReference(item[1], FilesystemAttachmentsWriter.this.resolver.resolve(item[0]));
         }
 
         @Override
@@ -180,11 +171,11 @@ public class HibernateAttachmentsReader implements DataReader<XWikiAttachmentCon
         {
             String[] item = this.data.next();
             try {
-                XWikiDocument doc = (XWikiDocument) HibernateAttachmentsReader.this.dab.getDocument(
-                    HibernateAttachmentsReader.this.resolver.resolve(item[0]));
+                XWikiDocument doc = (XWikiDocument) FilesystemAttachmentsWriter.this.dab.getDocument(
+                    FilesystemAttachmentsWriter.this.resolver.resolve(item[0]));
                 XWikiAttachment att = new XWikiAttachment(doc, item[1]);
-                HibernateAttachmentsReader.this.store.loadAttachmentContent(att,
-                    HibernateAttachmentsReader.this.context.get(), false);
+                FilesystemAttachmentsWriter.this.store.loadAttachmentContent(att,
+                    FilesystemAttachmentsWriter.this.context.get(), false);
                 return att.getAttachment_content();
             } catch (Exception e) {
 
