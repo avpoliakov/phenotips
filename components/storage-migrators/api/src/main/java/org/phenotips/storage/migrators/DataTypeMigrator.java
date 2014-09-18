@@ -20,7 +20,12 @@
 package org.phenotips.storage.migrators;
 
 import org.xwiki.component.annotation.Role;
+import org.xwiki.component.util.DefaultParameterizedType;
+import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.stability.Unstable;
+
+import java.lang.reflect.Type;
+import java.lang.reflect.WildcardType;
 
 /**
  * @version $Id$
@@ -30,7 +35,10 @@ import org.xwiki.stability.Unstable;
 @Role
 public interface DataTypeMigrator<T>
 {
-    Type getType();
+    Type ROLE_TYPE =
+        new DefaultParameterizedType(null, DocumentReferenceResolver.class, WildcardType.class);
+
+    String getDataType();
 
     boolean migrate();
 }

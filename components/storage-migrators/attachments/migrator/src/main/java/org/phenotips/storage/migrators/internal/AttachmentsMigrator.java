@@ -19,35 +19,33 @@
  */
 package org.phenotips.storage.migrators.internal;
 
-import org.phenotips.storage.migrators.Type;
+import org.phenotips.storage.migrators.DataTypeMigrator;
 
 import org.xwiki.component.annotation.Component;
 
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import com.xpn.xwiki.doc.XWikiAttachment;
+import com.xpn.xwiki.doc.XWikiAttachmentContent;
 
 /**
  * @version $Id$
  * @since 1.0RC1
  */
-@Component
+@Component(roles = { DataTypeMigrator.class })
 @Named("attachments")
 @Singleton
-public class AttachmentsMigrator extends AbstractDataTypeMigrator<XWikiAttachment>
+public class AttachmentsMigrator extends AbstractDataTypeMigrator<XWikiAttachmentContent>
 {
-    public static final Type TYPE = new Type("attachments", "hibernate");
-
-    @Override
-    public Type getType()
-    {
-        return TYPE;
-    }
-
     @Override
     protected String getStoreConfigurationKey()
     {
         return "xwiki.store.attachment.hint";
+    }
+
+    @Override
+    public String getDataType()
+    {
+        return "attachments";
     }
 }

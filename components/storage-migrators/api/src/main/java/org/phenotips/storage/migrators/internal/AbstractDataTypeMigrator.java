@@ -23,13 +23,19 @@ import org.phenotips.storage.migrators.DataReader;
 import org.phenotips.storage.migrators.DataTypeMigrator;
 import org.phenotips.storage.migrators.DataWriter;
 
+import org.xwiki.component.manager.ComponentLookupException;
+import org.xwiki.component.manager.ComponentManager;
+import org.xwiki.component.util.DefaultParameterizedType;
 import org.xwiki.configuration.ConfigurationSource;
 
+import java.lang.reflect.ParameterizedType;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Provider;
 
 import org.slf4j.Logger;
 
@@ -48,16 +54,21 @@ public abstract class AbstractDataTypeMigrator<T> implements DataTypeMigrator<T>
     private ConfigurationSource config;
 
     @Inject
-    protected Map<String, DataReader<T>> readers;
-
-    @Inject
-    protected Map<String, DataWriter<T>> writers;
+    protected Provider<ComponentManager> cm;
 
     @Override
     public boolean migrate()
     {
         DataWriter<T> writer = getWriter();
-        for (Map.Entry<String, DataReader<T>> entry : this.readers.entrySet()) {
+        Map<String, DataReader<T>> readers;
+        try {
+            readers = this.cm.get().getInstanceMap(
+                new DefaultParameterizedType(null, DataReader.class, ((ParameterizedType) this.getClass()
+                    .getGenericSuperclass()).getActualTypeArguments()[0]));
+        } catch (ComponentLookupException e) {
+            return false;
+        }
+        for (Map.Entry<String, DataReader<T>> entry : readers.entrySet()) {
             DataReader<T> reader = entry.getValue();
             if (!reader.hasData()) {
                 continue;
@@ -78,21 +89,33 @@ public abstract class AbstractDataTypeMigrator<T> implements DataTypeMigrator<T>
             Iterator<T> data = reader.getData();
             while (data.hasNext()) {
                 T item = data.next();
-                if (!writer.storeItem(item)) {
+                if (writer.storeItem(item)) {
+                    reader.discardItem(item);
                 }
             }
         }
-        // TODO Auto-generated method stub
-        return false;
+        return true;
     }
 
     private DataWriter<T> getWriter()
     {
         Object cfg = this.config.getProperty(getStoreConfigurationKey());
-        this.logger.error("Config key: {}, {}", cfg, cfg.getClass().getCanonicalName());
-        DataWriter<T> result = null;
-        // writers.get(cfg);
-        return result;
+        String hint = DEFAULT_STORE;
+        if (cfg instanceof List) {
+            @SuppressWarnings("unchecked")
+            List<String> cfgValues = (List<String>) cfg;
+            hint = cfgValues.get(cfgValues.size() - 1);
+        } else if (cfg instanceof String) {
+            hint = (String) cfg;
+        }
+        try {
+            return this.cm.get().getInstance(
+                new DefaultParameterizedType(null, DataWriter.class, ((ParameterizedType) this.getClass()
+                    .getGenericSuperclass()).getActualTypeArguments()[0]),
+                getDataType() + "/" + hint);
+        } catch (ComponentLookupException e) {
+            return null;
+        }
     }
 
     protected abstract String getStoreConfigurationKey();
