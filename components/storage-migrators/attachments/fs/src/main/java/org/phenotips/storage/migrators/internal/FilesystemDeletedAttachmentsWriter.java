@@ -33,29 +33,29 @@ import org.slf4j.Logger;
 
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
+import com.xpn.xwiki.doc.DeletedAttachment;
 import com.xpn.xwiki.doc.XWikiAttachment;
-import com.xpn.xwiki.store.XWikiAttachmentStoreInterface;
+import com.xpn.xwiki.store.AttachmentRecycleBinStore;
 
 /**
- * {@link DataWriter} that can write {@link XWikiAttachment attachments} (content and archive) into the filesystem
- * storage engine.
+ * {@link DataWriter} that can write {@link DeletedAttachment deleted attachments} into the filesystem storage engine.
  *
  * @version $Id$
  * @since 1.0RC1
  */
 @Component
-@Named("attachments/file")
+@Named("deleted attachments/file")
 @Singleton
-public class FilesystemAttachmentsWriter implements DataWriter<XWikiAttachment>
+public class FilesystemDeletedAttachmentsWriter implements DataWriter<DeletedAttachment>
 {
-    private static final Type TYPE = new Type("attachments", "file");
+    private static final Type TYPE = new Type("deleted attachments", "file");
 
     @Inject
     private Logger logger;
 
     @Inject
     @Named("file")
-    private XWikiAttachmentStoreInterface store;
+    private AttachmentRecycleBinStore store;
 
     @Inject
     private Provider<XWikiContext> context;
@@ -67,27 +67,17 @@ public class FilesystemAttachmentsWriter implements DataWriter<XWikiAttachment>
     }
 
     @Override
-    public boolean storeEntity(XWikiAttachment entity)
+    public boolean storeEntity(DeletedAttachment entity)
     {
         if (entity == null) {
             return true;
         }
-        XWikiAttachment existing =
-            new XWikiAttachment(entity.getDoc(), entity.getFilename());
         try {
-            this.store.loadAttachmentContent(existing, this.context.get(), false);
-            // If loading succeeded, then the attachment already exists on the filesystem;
-            // keep using the existing attachment version and discard the database one
-            return true;
-        } catch (XWikiException e) {
-            // No such attachment on the filesystem, continue storing it
-        }
-        try {
-            this.store.saveAttachmentContent(entity, false, this.context.get(), false);
-            // The archive is also automatically stored by the call above, no need to explicitly store the archive
+            XWikiAttachment attachment = entity.restoreAttachment(null, this.context.get());
+            this.store.saveToRecycleBin(attachment, entity.getDeleter(), entity.getDate(), this.context.get(), false);
             return true;
         } catch (XWikiException ex) {
-            this.logger.error("Failed to store attachment into the filesystem store: {}", ex.getMessage(), ex);
+            this.logger.error("Failed to store deleted attachment into the filesystem store: {}", ex.getMessage(), ex);
             return false;
         }
     }

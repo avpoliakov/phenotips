@@ -20,25 +20,37 @@
 package org.phenotips.storage.migrators;
 
 import org.xwiki.component.annotation.Role;
-import org.xwiki.component.util.DefaultParameterizedType;
-import org.xwiki.model.reference.DocumentReferenceResolver;
 import org.xwiki.stability.Unstable;
 
-import java.lang.reflect.Type;
-import java.lang.reflect.WildcardType;
-
 /**
+ * Manages the migration of a specific type of data: reads the available data from all the implemented store types and
+ * pushes it to the currently enabled store.
+ * <p>
+ * WARNING: Due to a limitation in the current implementation of the component manager, the stor
+ * </p>
+ *
+ * @param <T> the type of data managed by this migrator, one of the classes from the data model
  * @version $Id$
  * @since 1.0RC1
  */
-@Unstable
+@Unstable("The implemented role will change (see the WARNING in the interface javadoc), "
+    + "and a method to list data will be added.")
 @Role
 public interface DataTypeMigrator<T>
 {
-    Type ROLE_TYPE =
-        new DefaultParameterizedType(null, DocumentReferenceResolver.class, WildcardType.class);
-
+    /**
+     * The type of data managed by this migrator.
+     *
+     * @return a short name for the data type, such as {@code "attachments"} or {@code "deleted attachments"}
+     * @see Type#getDataType()
+     */
     String getDataType();
 
+    /**
+     * Perform the data migration from all available, but not used, store types, into the store currently used for this
+     * data type.
+     *
+     * @return {@code true} if all the data was successfully migrated, {@code false} in case of failure
+     */
     boolean migrate();
 }

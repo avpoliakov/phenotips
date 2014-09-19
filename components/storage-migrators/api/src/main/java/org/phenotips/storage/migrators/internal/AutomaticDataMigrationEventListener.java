@@ -19,36 +19,40 @@
  */
 package org.phenotips.storage.migrators.internal;
 
-import org.phenotips.storage.migrators.DataTypeMigrator;
+import org.phenotips.storage.migrators.DataMigrationManager;
 
+import org.xwiki.bridge.event.ApplicationReadyEvent;
 import org.xwiki.component.annotation.Component;
+import org.xwiki.observation.AbstractEventListener;
+import org.xwiki.observation.event.Event;
 
+import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 
-import com.xpn.xwiki.doc.XWikiAttachment;
-
 /**
- * {@link DataTypeMigrator} for migrating attachments. The current implementation of the XWiki storage engine forces the
- * attachment metadata to be stored in the database, so this migrates the attachment content and its history.
+ * Automatically performs data migration when PhenoTips starts.
  *
  * @version $Id$
  * @since 1.0RC1
  */
-@Component(roles = { DataTypeMigrator.class })
-@Named("attachments")
+@Component
+@Named("automatic-data-migration")
 @Singleton
-public class AttachmentsMigrator extends AbstractDataTypeMigrator<XWikiAttachment>
+public class AutomaticDataMigrationEventListener extends AbstractEventListener
 {
-    @Override
-    protected String getStoreConfigurationKey()
+    @Inject
+    private DataMigrationManager migrationManager;
+
+    /** Default constructor, sets up the listener name and the list of events to subscribe to. */
+    public AutomaticDataMigrationEventListener()
     {
-        return "xwiki.store.attachment.hint";
+        super("automatic-data-migration", new ApplicationReadyEvent());
     }
 
     @Override
-    public String getDataType()
+    public void onEvent(Event event, Object source, Object data)
     {
-        return "attachments";
+        this.migrationManager.migrate();
     }
 }

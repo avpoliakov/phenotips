@@ -22,7 +22,6 @@ package org.phenotips.storage.migrators.internal;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.component.phase.Initializable;
 import org.xwiki.component.phase.InitializationException;
-import org.xwiki.configuration.ConfigurationSource;
 import org.xwiki.configuration.internal.CommonsConfigurationSource;
 import org.xwiki.environment.Environment;
 import org.xwiki.stability.Unstable;
@@ -38,7 +37,8 @@ import org.apache.commons.configuration.PropertiesConfiguration;
 import org.slf4j.Logger;
 
 /**
- * Exposes the configuration used by the old XWiki core through the modern {@link ConfigurationSource} API.
+ * Exposes the configuration used by the old XWiki core through the modern
+ * {@link org.xwiki.configuration.ConfigurationSource} API.
  *
  * @version $Id$
  * @since 1.0RC1

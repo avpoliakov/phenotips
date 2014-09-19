@@ -29,6 +29,7 @@ import org.xwiki.component.util.DefaultParameterizedType;
 import org.xwiki.configuration.ConfigurationSource;
 
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -40,32 +41,40 @@ import javax.inject.Provider;
 import org.slf4j.Logger;
 
 /**
+ * Implementation for the {@link DataTypeMigrator} role, which tries to use all available {@link DataReader}s that
+ * {@link DataReader#hasData() have data} and {@link DataWriter#storeEntity(Object) write} the retrieved data to the
+ * currently enabled {@link DataWriter storage engine}.
+ *
+ * @param <T> the type of data managed by this migrator, one of the classes from the data model
  * @version $Id$
+ * @since 1.0RC1
  */
 public abstract class AbstractDataTypeMigrator<T> implements DataTypeMigrator<T>
 {
+    /** The current default storage engine assumed by XWiki if no specific store is enabled. */
     private static final String DEFAULT_STORE = "hibernate";
 
+    /** Logging helper object. */
     @Inject
     private Logger logger;
 
+    /** Provides access tot the configuration file where the storage engines are configured. */
     @Inject
     @Named("legacy")
     private ConfigurationSource config;
 
+    /** Needed for accessing the available data readers and writers. */
     @Inject
-    protected Provider<ComponentManager> cm;
+    private Provider<ComponentManager> cm;
 
     @Override
     public boolean migrate()
     {
-        DataWriter<T> writer = getWriter();
-        Map<String, DataReader<T>> readers;
-        try {
-            readers = this.cm.get().getInstanceMap(
-                new DefaultParameterizedType(null, DataReader.class, ((ParameterizedType) this.getClass()
-                    .getGenericSuperclass()).getActualTypeArguments()[0]));
-        } catch (ComponentLookupException e) {
+        boolean allDataMigrated = true;
+        DataWriter<T> writer = getCurrentWriter();
+        Map<String, DataReader<T>> readers = getReaders();
+        if (readers == null) {
+            // Failed to retrieve the available readers from the component manager
             return false;
         }
         for (Map.Entry<String, DataReader<T>> entry : readers.entrySet()) {
@@ -83,25 +92,30 @@ public abstract class AbstractDataTypeMigrator<T> implements DataTypeMigrator<T>
             }
 
             if (reader.getType().equals(writer.getType())) {
+                // Same type of storage, no need to move
                 continue;
             }
 
             Iterator<T> data = reader.getData();
             while (data.hasNext()) {
                 T item = data.next();
-                if (writer.storeItem(item)) {
-                    reader.discardItem(item);
+                if (writer.storeEntity(item)) {
+                    reader.discardEntity(item);
+                } else {
+                    allDataMigrated = false;
                 }
             }
         }
-        return true;
+        return allDataMigrated;
     }
 
-    private DataWriter<T> getWriter()
+    private DataWriter<T> getCurrentWriter()
     {
         Object cfg = this.config.getProperty(getStoreConfigurationKey());
         String hint = DEFAULT_STORE;
         if (cfg instanceof List) {
+            // commons-configuration would return the first value if we request a string, we need to explicitly use the
+            // last value, which is the one actually used by XWiki
             @SuppressWarnings("unchecked")
             List<String> cfgValues = (List<String>) cfg;
             hint = cfgValues.get(cfgValues.size() - 1);
@@ -110,13 +124,37 @@ public abstract class AbstractDataTypeMigrator<T> implements DataTypeMigrator<T>
         }
         try {
             return this.cm.get().getInstance(
-                new DefaultParameterizedType(null, DataWriter.class, ((ParameterizedType) this.getClass()
-                    .getGenericSuperclass()).getActualTypeArguments()[0]),
+                new DefaultParameterizedType(null, DataWriter.class, getImplementationType()),
                 getDataType() + "/" + hint);
         } catch (ComponentLookupException e) {
             return null;
         }
     }
 
+    private Map<String, DataReader<T>> getReaders()
+    {
+        try {
+            return this.cm.get().getInstanceMap(
+                new DefaultParameterizedType(null, DataReader.class, getImplementationType()));
+        } catch (ComponentLookupException e) {
+            return null;
+        }
+    }
+
+    /**
+     * The real value behind {@code <T>} used by the implementation.
+     *
+     * @return the type declared by the end implementation of this migrator
+     */
+    private Type getImplementationType()
+    {
+        return ((ParameterizedType) this.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+    }
+
+    /**
+     * The key used in {@code xwiki.cfg} to configure the storage engine for this type of data.
+     *
+     * @return a key valid in {@code xwiki.cfg}, such as {@code xwiki.store.attachment.hint}
+     */
     protected abstract String getStoreConfigurationKey();
 }

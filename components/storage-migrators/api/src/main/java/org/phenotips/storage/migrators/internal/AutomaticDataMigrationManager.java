@@ -20,7 +20,6 @@
 package org.phenotips.storage.migrators.internal;
 
 import org.phenotips.storage.migrators.DataMigrationManager;
-import org.phenotips.storage.migrators.DataReader;
 import org.phenotips.storage.migrators.DataTypeMigrator;
 
 import org.xwiki.component.annotation.Component;
@@ -31,8 +30,8 @@ import javax.inject.Inject;
 import javax.inject.Singleton;
 
 /**
- * Implementation for the {@link DataMigrationManager} role, which tries to use all available {@link DataReader}s that
- * {@link DataReader#hasData() have legacy data} and write it to the currently enabled storage engine.
+ * Implementation for the {@link DataMigrationManager} role, which tries to invoke all available
+ * {@link DataTypeMigrator}s.
  *
  * @version $Id$
  * @since 1.0RC1
@@ -41,15 +40,21 @@ import javax.inject.Singleton;
 @Singleton
 public class AutomaticDataMigrationManager implements DataMigrationManager
 {
+    /**
+     * All available migrators. Due to a limitation in the current component manager implementation, the generic type
+     * cannot be used here. Update once http://jira.xwiki.org/browse/XCOMMONS-651 gets fixed.
+     */
     @Inject
     private List<DataTypeMigrator> migrators;
 
     @Override
     public boolean migrate()
     {
+        boolean result = true;
         for (DataTypeMigrator<?> migrator : this.migrators) {
-            migrator.migrate();
+            // Don't change the order, or the operation will be short-circuited before the call
+            result = migrator.migrate() && result;
         }
-        return true;
+        return result;
     }
 }

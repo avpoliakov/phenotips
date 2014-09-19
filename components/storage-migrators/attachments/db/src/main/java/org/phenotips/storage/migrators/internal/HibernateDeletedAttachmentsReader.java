@@ -22,7 +22,6 @@ package org.phenotips.storage.migrators.internal;
 import org.phenotips.storage.migrators.DataReader;
 import org.phenotips.storage.migrators.Type;
 
-import org.xwiki.bridge.DocumentAccessBridge;
 import org.xwiki.component.annotation.Component;
 import org.xwiki.model.reference.AttachmentReference;
 import org.xwiki.model.reference.DocumentReferenceResolver;
@@ -41,33 +40,30 @@ import org.slf4j.Logger;
 
 import com.xpn.xwiki.XWikiContext;
 import com.xpn.xwiki.XWikiException;
-import com.xpn.xwiki.doc.XWikiAttachment;
-import com.xpn.xwiki.doc.XWikiAttachmentContent;
-import com.xpn.xwiki.doc.XWikiDocument;
-import com.xpn.xwiki.store.AttachmentVersioningStore;
-import com.xpn.xwiki.store.XWikiAttachmentStoreInterface;
+import com.xpn.xwiki.doc.DeletedAttachment;
+import com.xpn.xwiki.store.AttachmentRecycleBinStore;
 import com.xpn.xwiki.store.XWikiHibernateBaseStore;
 import com.xpn.xwiki.store.hibernate.HibernateSessionFactory;
 
 /**
- * {@link DataReader} that can read {@link XWikiAttachment attachment} contents and history from a Hibernate-managed
- * database (the default storage engine of XWiki).
+ * {@link DataReader} that can read {@link DeletedAttachment deleted attachments} from a Hibernate-managed database (the
+ * default storage engine of XWiki).
  *
  * @version $Id$
  * @since 1.0RC1
  */
 @Component
-@Named("attachments/hibernate")
+@Named("deleted attachments/hibernate")
 @Singleton
-public class HibernateAttachmentsReader implements DataReader<XWikiAttachment>
+public class HibernateDeletedAttachmentsReader implements DataReader<DeletedAttachment>
 {
-    private static final Type TYPE = new Type("attachments", "hibernate");
+    private static final Type TYPE = new Type("deleted attachments", "hibernate");
 
     private static final String SESSION_KEY = "hibsession";
 
-    private static final String DATA_RETRIEVE_QUERY =
-        "select d.fullName, a.filename from XWikiDocument d, XWikiAttachment a, XWikiAttachmentContent c"
-            + " where a.docId = d.id and c.id = a.id";
+    private static final String DATA_RETRIEVE_QUERY = "select a.id from DeletedAttachment a";
+
+    private static final String DATA_REFERENCE_QUERY = "select a.docName, a.filename from DeletedAttachment a";
 
     @Inject
     private Logger logger;
@@ -77,18 +73,11 @@ public class HibernateAttachmentsReader implements DataReader<XWikiAttachment>
 
     @Inject
     @Named("hibernate")
-    private XWikiAttachmentStoreInterface store;
-
-    @Inject
-    @Named("hibernate")
-    private AttachmentVersioningStore archiveStore;
+    private AttachmentRecycleBinStore store;
 
     @Inject
     @Named("current")
     private DocumentReferenceResolver<String> resolver;
-
-    @Inject
-    private DocumentAccessBridge dab;
 
     @Inject
     private Provider<XWikiContext> context;
@@ -105,7 +94,7 @@ public class HibernateAttachmentsReader implements DataReader<XWikiAttachment>
         Session session = null;
         try {
             session = this.hibernate.getSessionFactory().openSession();
-            Criteria c = session.createCriteria(XWikiAttachmentContent.class);
+            Criteria c = session.createCriteria(DeletedAttachment.class);
             c.setMaxResults(1);
             return !c.list().isEmpty();
         } finally {
@@ -121,25 +110,24 @@ public class HibernateAttachmentsReader implements DataReader<XWikiAttachment>
         // FIXME Revisit how the session/transaction is managed
         Session session = getSession();
         @SuppressWarnings("unchecked")
-        Iterator<Object[]> data = session.createQuery(DATA_RETRIEVE_QUERY).iterate();
+        Iterator<Object[]> data = session.createQuery(DATA_REFERENCE_QUERY).iterate();
         return new ReferenceIterator(data);
     }
 
     @Override
-    public Iterator<XWikiAttachment> getData()
+    public Iterator<DeletedAttachment> getData()
     {
         Session session = getSession();
         @SuppressWarnings("unchecked")
-        Iterator<Object[]> data = session.createQuery(DATA_RETRIEVE_QUERY).iterate();
-        return new AttachmentIterator(data);
+        Iterator<Long> data = session.createQuery(DATA_RETRIEVE_QUERY).iterate();
+        return new DeletedAttachmentIterator(data);
     }
 
     @Override
-    public boolean discardEntity(XWikiAttachment entity)
+    public boolean discardEntity(DeletedAttachment entity)
     {
         Session session = getSession();
-        session.delete(entity.getAttachment_content());
-        session.delete(entity.getAttachment_archive());
+        session.delete(entity);
         // FIXME The transaction needs to be committed... The last item discarded might be left in a dangling session
         return true;
     }
@@ -148,8 +136,7 @@ public class HibernateAttachmentsReader implements DataReader<XWikiAttachment>
     public boolean discardAllData()
     {
         Session session = getSession();
-        session.createQuery("delete from XWikiAttachmentContent").executeUpdate();
-        session.createQuery("delete from XWikiAttachmentArchive").executeUpdate();
+        session.createQuery("delete from DeletedAttachment").executeUpdate();
         // FIXME The transaction needs to be committed...
         return true;
     }
@@ -200,7 +187,7 @@ public class HibernateAttachmentsReader implements DataReader<XWikiAttachment>
         {
             Object[] item = this.data.next();
             return new AttachmentReference(String.valueOf(item[1]),
-                HibernateAttachmentsReader.this.resolver.resolve(String.valueOf(item[0])));
+                HibernateDeletedAttachmentsReader.this.resolver.resolve(String.valueOf(item[0])));
         }
 
         @Override
@@ -210,11 +197,11 @@ public class HibernateAttachmentsReader implements DataReader<XWikiAttachment>
         }
     }
 
-    private class AttachmentIterator implements Iterator<XWikiAttachment>
+    private class DeletedAttachmentIterator implements Iterator<DeletedAttachment>
     {
-        private Iterator<Object[]> data;
+        private Iterator<Long> data;
 
-        AttachmentIterator(Iterator<Object[]> data)
+        DeletedAttachmentIterator(Iterator<Long> data)
         {
             this.data = data;
         }
@@ -230,20 +217,15 @@ public class HibernateAttachmentsReader implements DataReader<XWikiAttachment>
         }
 
         @Override
-        public XWikiAttachment next()
+        public DeletedAttachment next()
         {
-            Object[] item = this.data.next();
+            Long item = this.data.next();
             try {
-                XWikiDocument doc = (XWikiDocument) HibernateAttachmentsReader.this.dab.getDocument(
-                    HibernateAttachmentsReader.this.resolver.resolve(String.valueOf(item[0])));
-                XWikiAttachment att = new XWikiAttachment(doc, String.valueOf(item[1]));
-                HibernateAttachmentsReader.this.store.loadAttachmentContent(att,
-                    HibernateAttachmentsReader.this.context.get(), false);
-                HibernateAttachmentsReader.this.archiveStore.loadArchive(att,
-                    HibernateAttachmentsReader.this.context.get(), false);
-                return att;
+                return HibernateDeletedAttachmentsReader.this.store.getDeletedAttachment(
+                    item, HibernateDeletedAttachmentsReader.this.context.get(), false);
             } catch (Exception ex) {
-                HibernateAttachmentsReader.this.logger.error("Failed to read attachment from the database store: {}",
+                HibernateDeletedAttachmentsReader.this.logger.error(
+                    "Failed to read deleted attachment from the database store: {}",
                     ex.getMessage(), ex);
             }
             return null;

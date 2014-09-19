@@ -17,30 +17,37 @@
  * Software Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA
  * 02110-1301 USA, or see the FSF site: http://www.fsf.org.
  */
-package org.phenotips.storage.migrators;
+package org.phenotips.storage.migrators.internal;
 
-import org.xwiki.component.annotation.Role;
-import org.xwiki.stability.Unstable;
+import org.phenotips.storage.migrators.DataTypeMigrator;
+
+import org.xwiki.component.annotation.Component;
+
+import javax.inject.Named;
+import javax.inject.Singleton;
+
+import com.xpn.xwiki.doc.DeletedAttachment;
 
 /**
- * Stores recovered data into the new storage engine.
+ * {@link DataTypeMigrator} for migrating {@link DeletedAttachment deleted attachments}.
  *
- * @param <T> the type of data managed by this writer, one of the classes from the data model
  * @version $Id$
  * @since 1.0RC1
  */
-@Unstable
-@Role
-public interface DataWriter<T>
+@Component(roles = { DataTypeMigrator.class })
+@Named("deleted attachments")
+@Singleton
+public class DeletedAttachmentsMigrator extends AbstractDataTypeMigrator<DeletedAttachment>
 {
-    /** @return an identifier for this writer, specifying the type of data managed and the supported storage */
-    Type getType();
+    @Override
+    protected String getStoreConfigurationKey()
+    {
+        return "xwiki.store.attachment.recyclebin.hint";
+    }
 
-    /**
-     * Store an entity in the new storage.
-     *
-     * @param entity the entity to store
-     * @return {@code true} if the entity was successfully stored, {@code false} in case of failure
-     */
-    boolean storeEntity(T entity);
+    @Override
+    public String getDataType()
+    {
+        return "deleted attachments";
+    }
 }

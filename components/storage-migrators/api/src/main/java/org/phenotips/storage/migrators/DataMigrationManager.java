@@ -20,12 +20,24 @@
 package org.phenotips.storage.migrators;
 
 import org.xwiki.component.annotation.Role;
+import org.xwiki.stability.Unstable;
 
 /**
+ * Manages the migration of all known types of data, invoking each available {@link DataTypeMigrator}.
+ *
  * @version $Id$
+ * @since 1.0RC1
  */
+@Unstable
 @Role
 public interface DataMigrationManager
 {
+    /**
+     * Perform the data migration from all available, but not used, store types, into the currently used store for each
+     * data type.
+     *
+     * @return {@code true} if all the data was successfully migrated, {@code false} in case of failure
+     * @see DataTypeMigrator#migrate()
+     */
     boolean migrate();
 }

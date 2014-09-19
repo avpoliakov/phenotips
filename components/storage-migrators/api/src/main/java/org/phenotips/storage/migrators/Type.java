@@ -38,27 +38,45 @@ public final class Type
     /**
      * Simple constructor passing all the required information.
      *
-     * @param dataType a short name for the data type, such as {@code "attachments"} or {@code "attachments trash"}
-     * @param storeType a short identifier for the storage technology, such as {@code "hibernate"} or {@code "void"}
+     * @param dataType a short name for the data type, such as {@code "attachments"} or {@code "deleted attachments"}
+     * @param storeType a short identifier for the storage technology, such as {@code "hibernate"}, {@code file}, or
+     *            {@code "void"}
      */
-    public Type(String dataType, String storeType)
+    public Type(final String dataType, final String storeType)
     {
         this.dataType = dataType;
         this.storeType = storeType;
     }
 
+    /**
+     * The type of data being managed by a {@link DataReader} or {@link DataWriter}.
+     *
+     * @return a short name for the data type, such as {@code "attachments"} or {@code "deleted attachments"}
+     */
     public String getDataType()
     {
         return this.dataType;
     }
 
+    /**
+     * The storage technology where the {@link DataReader} reads from, or the {@link DataWriter} writes to.
+     *
+     * @return a short identifier for the storage technology, such as {@code "hibernate"}, {@code file}, or
+     *         {@code "void"}
+     */
     public String getStoreType()
     {
         return this.storeType;
     }
 
     @Override
-    public boolean equals(Object other)
+    public String toString()
+    {
+        return this.dataType + '/' + this.storeType;
+    }
+
+    @Override
+    public boolean equals(final Object other)
     {
         if (other == null) {
             return false;

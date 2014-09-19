@@ -53,6 +53,7 @@
     <module>users</module>
     <module>application-configuration</module>
     <module>patient-tools</module>
+    <module>storage-migrators</module>
     <module>ncbieutils-services</module>
     <module>phenotype-mapping-service</module>
     <module>specificity-meter</module>

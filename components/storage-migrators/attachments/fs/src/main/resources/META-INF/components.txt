@@ -1,1 +1,2 @@
 org.phenotips.storage.migrators.internal.FilesystemAttachmentsWriter
+org.phenotips.storage.migrators.internal.FilesystemDeletedAttachmentsWriter
