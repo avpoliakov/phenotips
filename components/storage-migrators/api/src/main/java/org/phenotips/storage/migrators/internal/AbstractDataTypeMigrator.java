@@ -70,8 +70,13 @@ public abstract class AbstractDataTypeMigrator<T> implements DataTypeMigrator<T>
     @Override
     public boolean migrate()
     {
-        boolean allDataMigrated = true;
         DataWriter<T> writer = getCurrentWriter();
+        if (writer == null) {
+            // No writer found, keep data in place
+            return true;
+        }
+
+        boolean allDataMigrated = true;
         Map<String, DataReader<T>> readers = getReaders();
         if (readers == null) {
             // Failed to retrieve the available readers from the component manager
@@ -79,20 +84,7 @@ public abstract class AbstractDataTypeMigrator<T> implements DataTypeMigrator<T>
         }
         for (Map.Entry<String, DataReader<T>> entry : readers.entrySet()) {
             DataReader<T> reader = entry.getValue();
-            if (!reader.hasData()) {
-                continue;
-            }
-
-            if (writer == null) {
-                // No writer found, keep data in place
-                this.logger.warn(
-                    "Legacy attachments found in [{}], but no current storage configured; keeping legacy data",
-                    entry.getKey());
-                return false;
-            }
-
-            if (reader.getType().equals(writer.getType())) {
-                // Same type of storage, no need to move
+            if (reader.getType().equals(writer.getType()) || !reader.hasData()) {
                 continue;
             }
 
